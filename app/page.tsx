@@ -2,42 +2,7 @@
 import { TravelForm } from '@/components/travel-form';
 import { Plane } from 'lucide-react';
 
-// import Groq from 'groq-sdk';
-// import { useEffect } from 'react';
-
-// const groq = new Groq({
-// 	apiKey: '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',
-// 	dangerouslyAllowBrowser: true,
-// });
-
-// export async function main() {
-// 	const chatCompletion = await getGroqChatCompletion();
-// 	// Print the completion returned by the LLM.
-// 	console.log(chatCompletion.choices[0]?.message?.content || '');
-// }
-
-// export async function getGroqChatCompletion() {
-// 	return groq.chat.completions.create({
-// 		messages: [
-// 			{
-// 				role: 'user',
-// 				content:
-// 					'Name the best football player of all time . Name a single one',
-// 			},
-// 		],
-// 		model: 'llama3-8b-8192',
-// 	});
-// }
-
 export default function Home() {
-	// async function getData() {
-	// 	const res = await main();
-	// 	console.log(res);
-	// }
-
-	// useEffect(() => {
-	// 	getData();
-	// }, []);
 
 	return (
 		<main className="min-h-screen py-12 px-4 bg-gradient-to-b from-background to-accent">

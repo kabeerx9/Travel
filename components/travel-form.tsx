@@ -29,6 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { generateTripPlan } from '@/lib/ai-service';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
+import { debounce } from 'lodash';
 import {
 	Activity,
 	AlertCircle,
@@ -36,12 +37,11 @@ import {
 	Compass,
 	Heart,
 	Home,
-	Plane,
 	Users,
 	Utensils,
 	Wallet,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { TripPreview } from './trip-preview';
@@ -104,6 +104,9 @@ export function TravelForm() {
 	const [tripPlan, setTripPlan] = useState(null);
 	const [calendarOpen, setCalendarOpen] = useState(false);
 
+	const [citySuggestions, setCitySuggestions] = useState([]);
+	const [loadingCities, setLoadingCities] = useState(false);
+
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
@@ -119,6 +122,30 @@ export function TravelForm() {
 			specialRequirements: '',
 		},
 	});
+
+	// Debounced function to fetch cities from backend
+	const fetchCities = debounce(async (query) => {
+		// if (!query) return;
+		setLoadingCities(true);
+		try {
+			const response = await fetch(
+				`http://localhost:8000/autocomplete?search=${query}`
+			);
+			const data = await response.json();
+			setCitySuggestions(data); // Assuming backend returns an array of city names
+		} catch (error) {
+			console.error('Error fetching cities:', error);
+		} finally {
+			setLoadingCities(false);
+		}
+	}, 300);
+
+	// Effect to trigger city search whenever destination input changes
+	useEffect(() => {
+		console.log('Use effect called');
+		const destination = form.watch('destination');
+		fetchCities(destination);
+	}, [form.watch('destination')]);
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		if (currentStep !== 3) {
@@ -219,17 +246,30 @@ export function TravelForm() {
 							name="destination"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel className="emoji-label">
-										<Plane className="w-5 h-5" /> Where's your dream
-										destination?
-									</FormLabel>
+									<FormLabel>Where&apos;s your dream destination?</FormLabel>
 									<FormControl>
 										<Input
 											placeholder="e.g., Tokyo, Japan"
-											className="genz-input"
 											{...field}
+											onChange={(e) => {
+												field.onChange(e);
+												fetchCities(e.target.value);
+											}}
 										/>
 									</FormControl>
+									{loadingCities ? (
+										<div>Loading cities...</div>
+									) : (
+										<ul>
+											{citySuggestions.map((city, index) => (
+												<li
+													key={index}
+													onClick={() => form.setValue('destination', city)}>
+													{city}
+												</li>
+											))}
+										</ul>
+									)}
 									<FormMessage />
 								</FormItem>
 							)}
@@ -320,7 +360,9 @@ export function TravelForm() {
 								name="groupType"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel className="emoji-label">Who's going?</FormLabel>
+										<FormLabel className="emoji-label">
+											Who&apos;s going?
+										</FormLabel>
 										<Select
 											onValueChange={field.onChange}
 											defaultValue={field.value}>
