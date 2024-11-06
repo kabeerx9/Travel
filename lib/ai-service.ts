@@ -1,7 +1,7 @@
 import { TripFormData, TripPlan } from '@/types'
 
-const API_URL = 'https://api.openai.com/v1/chat/completions'
-const API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY
+const API_URL = 'https://api.aimlapi.com/api/v1/chat/completions'
+const API_KEY = 'd3048911027f411089a96cd084dbe73b'
 
 export async function generateTripPlan(formData: TripFormData): Promise<TripPlan> {
   try {
@@ -14,7 +14,7 @@ export async function generateTripPlan(formData: TripFormData): Promise<TripPlan
         'Authorization': `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
