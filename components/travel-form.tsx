@@ -105,15 +105,19 @@ export function TravelForm() {
       activityLevel: "medium",
       specialRequirements: "",
     },
-    mode: "onChange",
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (currentStep !== 3) {
+      return // Only submit when on the final step
+    }
+    
     try {
       setLoading(true)
       const plan = await generateTripPlan(values)
       setTripPlan(plan)
     } catch (error) {
+      console.error('Trip generation error:', error)
       toast({
         variant: "destructive",
         title: "Oops! Something went wrong",
@@ -130,22 +134,26 @@ export function TravelForm() {
     if (currentStep === 1) {
       isValid = await form.trigger(['destination', 'dates', 'travelers', 'groupType'])
     } else if (currentStep === 2) {
-      isValid = await form.trigger(['tripStyle', 'interests'])
+      isValid = await form.trigger(['tripStyle', 'interests', 'dietaryPreferences'])
     }
 
     if (!isValid) {
+      const errors = form.formState.errors
+      const errorMessage = Object.values(errors)[0]?.message || "Please fill in all required fields"
       toast({
         variant: "destructive",
         title: "Required Fields",
-        description: "Please fill in all required fields before proceeding.",
+        description: errorMessage,
       })
       return false
     }
     return true
   }
 
-  const handleNext = async () => {
-    if (await validateStep()) {
+  const handleNext = async (e: React.MouseEvent) => {
+    e.preventDefault() // Prevent form submission
+    const isValid = await validateStep()
+    if (isValid) {
       setCurrentStep(step => step + 1)
     }
   }
@@ -284,7 +292,7 @@ export function TravelForm() {
                           <SelectValue placeholder="Select group type" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="bg-white">
                         <SelectItem value="solo">🙋‍♂️ Solo Adventure</SelectItem>
                         <SelectItem value="couple">👫 Couple's Getaway</SelectItem>
                         <SelectItem value="family">👨‍👩‍👧‍👦 Family Trip</SelectItem>
