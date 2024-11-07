@@ -158,7 +158,7 @@ export function TravelForm({
 
 		try {
 			setLoading(true);
-			const response = await fetch('http://localhost:8000/generate-trip-plan', {
+			const response = await fetch(`${BACKEND_URL}generate-trip-plan`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
