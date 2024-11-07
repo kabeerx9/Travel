@@ -267,7 +267,9 @@ export function TravelForm({
 											<Command>
 												<CommandInput
 													onChangeCapture={(e) =>
-														setDestinationSearchQuery(e.target.value)
+														setDestinationSearchQuery(
+															(e.target as HTMLInputElement).value
+														)
 													}
 													placeholder="Search destination..."
 												/>
@@ -565,7 +567,8 @@ export function TravelForm({
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel className="emoji-label">
-										<Wallet className="w-5 h-5" /> What's your daily budget?
+										<Wallet className="w-5 h-5" /> What&apos;s your daily
+										budget?
 									</FormLabel>
 									<FormControl>
 										<Input
