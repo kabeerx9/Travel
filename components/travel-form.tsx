@@ -42,7 +42,6 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { generateTripPlan } from '@/lib/ai-service';
 import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
@@ -63,7 +62,6 @@ import {
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { TripPreview } from './trip-preview';
 
 const formSchema = z.object({
 	destination: z.string().min(2, 'Select a valid destination'),
@@ -89,11 +87,14 @@ const formSchema = z.object({
 	specialRequirements: z.string().optional(),
 });
 
-export function TravelForm() {
+export function TravelForm({
+	setTripPlan,
+}: {
+	setTripPlan: React.Dispatch<React.SetStateAction<string>>;
+}) {
 	const { toast } = useToast();
 	const [currentStep, setCurrentStep] = useState(1);
 	const [loading, setLoading] = useState(false);
-	const [tripPlan, setTripPlan] = useState(null);
 	const [calendarOpen, setCalendarOpen] = useState(false);
 
 	const [destinationSearchQuery, setDestinationSearchQuery] = useState('');
@@ -148,16 +149,25 @@ export function TravelForm() {
 		fetchCities(destinationSearchQuery);
 	}, [destinationSearchQuery]);
 
-	async function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: any) {
 		if (currentStep !== 3) {
 			return; // Only submit when on the final step
 		}
 
 		try {
 			setLoading(true);
-			const plan = await generateTripPlan(values);
-			console.log('I got the plan from ai service', plan);
-			setTripPlan(plan);
+			const response = await fetch('http://localhost:8000/generate-trip-plan', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(values),
+			});
+
+			if (!response.ok) throw new Error('Failed to fetch trip plan');
+
+			const data = await response.json();
+			setTripPlan(data.plan);
 		} catch (error) {
 			console.error('Trip generation error:', error);
 			toast({
@@ -211,20 +221,6 @@ export function TravelForm() {
 		}
 	};
 
-	if (tripPlan) {
-		return (
-			<TripPreview
-				plan={tripPlan}
-				onSave={async (contactInfo) => {
-					toast({
-						title: 'Trip plan saved! 🎉',
-						description: "We'll send you the details shortly.",
-					});
-				}}
-			/>
-		);
-	}
-
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -262,7 +258,7 @@ export function TravelForm() {
 														? cityOptions.find(
 																(option) => option.value === field.value
 														  )?.label
-														: 'Select language'}
+														: 'Select Destination'}
 													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 												</Button>
 											</FormControl>
@@ -273,7 +269,7 @@ export function TravelForm() {
 													onChangeCapture={(e) =>
 														setDestinationSearchQuery(e.target.value)
 													}
-													placeholder="Search language..."
+													placeholder="Search destination..."
 												/>
 												<CommandList>
 													<CommandEmpty>No Destination found.</CommandEmpty>
