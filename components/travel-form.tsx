@@ -1,5 +1,11 @@
 'use client';
 
+import {
+	accommodationEmojis,
+	dietaryOptions,
+	interestOptions,
+} from '@/app/utils/constants';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -11,6 +17,16 @@ import {
 	FormLabel,
 	FormMessage,
 } from '@/components/ui/form';
+
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from '@/components/ui/command';
+
 import { Input } from '@/components/ui/input';
 import {
 	Popover,
@@ -27,6 +43,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { generateTripPlan } from '@/lib/ai-service';
+import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { debounce } from 'lodash';
@@ -34,6 +51,8 @@ import {
 	Activity,
 	AlertCircle,
 	CalendarIcon,
+	Check,
+	ChevronsUpDown,
 	Compass,
 	Heart,
 	Home,
@@ -47,7 +66,7 @@ import * as z from 'zod';
 import { TripPreview } from './trip-preview';
 
 const formSchema = z.object({
-	destination: z.string().min(2, 'Please enter a destination'),
+	destination: z.string().min(2, 'Select a valid destination'),
 	dates: z.object({
 		from: z.date(),
 		to: z.date(),
@@ -56,6 +75,7 @@ const formSchema = z.object({
 	groupType: z.enum(['solo', 'couple', 'family', 'friends']),
 	tripStyle: z.enum(['adventure', 'cultural', 'relaxed', 'foodie', 'budget']),
 	budget: z.number().min(1000),
+	currency: z.string().min(1, 'Select a currency'),
 	interests: z.array(z.string()).min(1, 'Select at least one interest'),
 	dietaryPreferences: z.array(z.string()),
 	accommodationType: z.enum([
@@ -69,34 +89,6 @@ const formSchema = z.object({
 	specialRequirements: z.string().optional(),
 });
 
-const interestOptions = [
-	{ value: 'history', label: 'History & Culture', emoji: '🏛️' },
-	{ value: 'nature', label: 'Nature & Outdoors', emoji: '🌲' },
-	{ value: 'food', label: 'Food & Cuisine', emoji: '🍜' },
-	{ value: 'adventure', label: 'Adventure Sports', emoji: '🏃‍♂️' },
-	{ value: 'shopping', label: 'Shopping', emoji: '🛍️' },
-	{ value: 'nightlife', label: 'Nightlife', emoji: '🌙' },
-	{ value: 'art', label: 'Art & Museums', emoji: '🎨' },
-	{ value: 'relaxation', label: 'Wellness & Spa', emoji: '💆‍♀️' },
-];
-
-const dietaryOptions = [
-	{ value: 'vegetarian', label: 'Vegetarian', emoji: '🥗' },
-	{ value: 'vegan', label: 'Vegan', emoji: '🌱' },
-	{ value: 'nonveg', label: 'Non Vegetarian', emoji: '🍖' },
-	{ value: 'kosher', label: 'Kosher', emoji: '✡️' },
-	{ value: 'glutenFree', label: 'Gluten Free', emoji: '🌾' },
-	{ value: 'dairyFree', label: 'Dairy Free', emoji: '🥛' },
-];
-
-const accommodationEmojis = {
-	hotel: '🏨',
-	hostel: '🛏️',
-	apartment: '🏢',
-	resort: '🌴',
-	local: '🏠',
-};
-
 export function TravelForm() {
 	const { toast } = useToast();
 	const [currentStep, setCurrentStep] = useState(1);
@@ -104,8 +96,18 @@ export function TravelForm() {
 	const [tripPlan, setTripPlan] = useState(null);
 	const [calendarOpen, setCalendarOpen] = useState(false);
 
+	const [destinationSearchQuery, setDestinationSearchQuery] = useState('');
 	const [citySuggestions, setCitySuggestions] = useState([]);
 	const [loadingCities, setLoadingCities] = useState(false);
+
+	const cityOptions = !loadingCities
+		? citySuggestions.map((city) => ({
+				value: city,
+				label: city,
+		  }))
+		: [{ value: 'Loading cities...', label: 'Loading cities...' }];
+
+	console.log('City options are , ', cityOptions);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -115,6 +117,7 @@ export function TravelForm() {
 			groupType: 'solo',
 			tripStyle: 'cultural',
 			budget: 5000,
+			currency: 'inr',
 			interests: [],
 			dietaryPreferences: [],
 			accommodationType: 'hotel',
@@ -142,10 +145,8 @@ export function TravelForm() {
 
 	// Effect to trigger city search whenever destination input changes
 	useEffect(() => {
-		console.log('Use effect called');
-		const destination = form.watch('destination');
-		fetchCities(destination);
-	}, [form.watch('destination')]);
+		fetchCities(destinationSearchQuery);
+	}, [destinationSearchQuery]);
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		if (currentStep !== 3) {
@@ -245,31 +246,61 @@ export function TravelForm() {
 							control={form.control}
 							name="destination"
 							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Where&apos;s your dream destination?</FormLabel>
-									<FormControl>
-										<Input
-											placeholder="e.g., Tokyo, Japan"
-											{...field}
-											onChange={(e) => {
-												field.onChange(e);
-												fetchCities(e.target.value);
-											}}
-										/>
-									</FormControl>
-									{loadingCities ? (
-										<div>Loading cities...</div>
-									) : (
-										<ul>
-											{citySuggestions.map((city, index) => (
-												<li
-													key={index}
-													onClick={() => form.setValue('destination', city)}>
-													{city}
-												</li>
-											))}
-										</ul>
-									)}
+								<FormItem className="flex flex-col">
+									<FormLabel>Destination</FormLabel>
+									<Popover>
+										<PopoverTrigger asChild>
+											<FormControl>
+												<Button
+													variant="outline"
+													role="combobox"
+													className={cn(
+														'w-[200px] justify-between',
+														!field.value && 'text-muted-foreground'
+													)}>
+													{field.value
+														? cityOptions.find(
+																(option) => option.value === field.value
+														  )?.label
+														: 'Select language'}
+													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+												</Button>
+											</FormControl>
+										</PopoverTrigger>
+										<PopoverContent className="w-[200px] p-0">
+											<Command>
+												<CommandInput
+													onChangeCapture={(e) =>
+														setDestinationSearchQuery(e.target.value)
+													}
+													placeholder="Search language..."
+												/>
+												<CommandList>
+													<CommandEmpty>No Destination found.</CommandEmpty>
+													<CommandGroup>
+														{cityOptions.map((option) => (
+															<CommandItem
+																value={option.label}
+																key={option.value}
+																onSelect={() => {
+																	form.setValue('destination', option.value);
+																}}>
+																{option.label}
+																<Check
+																	className={cn(
+																		'ml-auto',
+																		option.value === field.value
+																			? 'opacity-100'
+																			: 'opacity-0'
+																	)}
+																/>
+															</CommandItem>
+														))}
+													</CommandGroup>
+												</CommandList>
+											</Command>
+										</PopoverContent>
+									</Popover>
 									<FormMessage />
 								</FormItem>
 							)}
@@ -374,7 +405,7 @@ export function TravelForm() {
 											<SelectContent className="bg-white">
 												<SelectItem value="solo">🙋‍♂️ Solo Adventure</SelectItem>
 												<SelectItem value="couple">
-													👫 Couple's Getaway
+													👫 Couple&apos;s Getaway
 												</SelectItem>
 												<SelectItem value="family">👨‍👩‍👧‍👦 Family Trip</SelectItem>
 												<SelectItem value="friends">👥 Friend Squad</SelectItem>
@@ -396,7 +427,8 @@ export function TravelForm() {
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel className="emoji-label">
-										<Compass className="w-5 h-5" /> What's your travel style?
+										<Compass className="w-5 h-5" /> What&apos;s your travel
+										style?
 									</FormLabel>
 									<Select
 										onValueChange={field.onChange}
@@ -549,6 +581,38 @@ export function TravelForm() {
 											onChange={(e) => field.onChange(parseInt(e.target.value))}
 										/>
 									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+
+						<FormField
+							control={form.control}
+							name="currency"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel className="emoji-label">
+										<Wallet className="w-5 h-5" /> Choose your currency?
+									</FormLabel>
+									<Select
+										onValueChange={field.onChange}
+										defaultValue={field.value}>
+										<FormControl>
+											<SelectTrigger className="genz-input">
+												<SelectValue placeholder="Select currency" />
+											</SelectTrigger>
+										</FormControl>
+										<SelectContent className="bg-white">
+											<SelectItem value="usd">💵 USD ($)</SelectItem>
+											<SelectItem value="eur">💶 EUR (€)</SelectItem>
+											<SelectItem value="gbp">💷 GBP (£)</SelectItem>
+											<SelectItem value="inr">₹ INR (₹)</SelectItem>
+											<SelectItem value="aud">💵 AUD ($)</SelectItem>
+											<SelectItem value="cad">💵 CAD ($)</SelectItem>
+											<SelectItem value="jpy">¥ JPY (¥)</SelectItem>
+											<SelectItem value="cny">¥ CNY (¥)</SelectItem>
+										</SelectContent>
+									</Select>
 									<FormMessage />
 								</FormItem>
 							)}
