@@ -1,3 +1,5 @@
+export const BACKEND_URL = 'https://travel-backend-ibup.onrender.com/';
+
 export const interestOptions = [
 	{ value: 'history', label: 'History & Culture', emoji: '🏛️' },
 	{ value: 'nature', label: 'Nature & Outdoors', emoji: '🌲' },

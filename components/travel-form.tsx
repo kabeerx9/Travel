@@ -2,6 +2,7 @@
 
 import {
 	accommodationEmojis,
+	BACKEND_URL,
 	dietaryOptions,
 	interestOptions,
 } from '@/app/utils/constants';
@@ -133,7 +134,8 @@ export function TravelForm({
 		setLoadingCities(true);
 		try {
 			const response = await fetch(
-				`http://localhost:8000/autocomplete?search=${query}`
+				// `http://localhost:8000/autocomplete?search=${query}`
+				`${BACKEND_URL}/autocomplete?search=${query}`
 			);
 			const data = await response.json();
 			setCitySuggestions(data); // Assuming backend returns an array of city names
