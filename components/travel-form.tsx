@@ -135,7 +135,7 @@ export function TravelForm({
 		try {
 			const response = await fetch(
 				// `http://localhost:8000/autocomplete?search=${query}`
-				`${BACKEND_URL}/autocomplete?search=${query}`
+				`${BACKEND_URL}autocomplete?search=${query}`
 			);
 			const data = await response.json();
 			setCitySuggestions(data); // Assuming backend returns an array of city names
